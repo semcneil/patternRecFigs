@@ -14,6 +14,7 @@ import random  # for random sampling
 import pdb  # for debugging
 import sys  # to quit early (exit)
 import pandas as pd  # for importing csv files
+from scipy.stats import norm
 
 salmonLength  = [0,7,17,17,16,11,11,12,21,21,20,20,5,3,2,3,8,5,10,1,10,2,3,10,8,3,2]
 seabassLength = [0,0,4,5,1,1,8,5,5,3,3,6,8,8,9,16,16,18,22,24,24,8,6,6,6,0,0]
@@ -24,9 +25,13 @@ seabassColor = []
 nClass1 = 150
 nClass2 = 225
 priors = [nClass1/(nClass1+nClass2), nClass2/(nClass1+nClass2)]
+class1Mean = (4,13)
+class2Mean = (8,24)
+class1Std = (1,6)
+class2Std = (2,8)
 
-class1raw = np.random.normal((4,13), (1,6), (nClass1,2))
-class2raw = np.random.normal((8,24), (2,8), (nClass2,2))
+class1raw = np.random.normal(class1Mean, class1Std, (nClass1,2))
+class2raw = np.random.normal(class2Mean, class2Std, (nClass2,2))
 
 def plot_classes():
     # plot the prior probabilities
@@ -163,16 +168,27 @@ def plot_classes():
         label.set_fontsize(18) 
     plt.bar(binCenters, posteriors1, width=0.5, label='Salmon', color='b', alpha=0.5)
     plt.bar(binCenters, posteriors2, width=0.5, label='SeaBass', color='r', alpha=0.5)
+    x_axis = np.arange(0,plt.xlim()[1],0.01)
+    pdf1 = priors[0]*norm.pdf(x_axis,np.mean(class1raw,0)[0],np.std(class1raw,0)[0])
+    pdf2 = priors[1]*norm.pdf(x_axis,np.mean(class2raw,0)[0],np.std(class2raw,0)[0])
+    # find crossover point as threshold
+    pdfDiff = pdf1 - pdf2
+    indLastPosDiff = [i for i,x in enumerate(np.diff(np.sign(pdfDiff))) if x < 0]
+    thresh = (x_axis[indLastPosDiff[0]] + x_axis[indLastPosDiff[0]+1])/2
+    ax.vlines(thresh, plt.ylim()[0], plt.ylim()[1], label='Color Boundary', linewidth=2, color='g')
+    plt.plot(x_axis, pdf1, color='b')
+    plt.plot(x_axis, pdf2, color='r')
     plt.grid()
     plt.xlabel('Color Intensity', fontsize=20)
     plt.ylabel('Posterior Probability', fontsize=20)
-    plt.title('Posterior Probabilities of Color Intensity for Both Classes')
+    plt.suptitle('Posterior Probabilities of Color Intensity for Both Classes')
+    plt.title(f'Threshold = {thresh:.2f}',fontsize=18)
     plt.legend()
     plt.savefig('posterior.pdf')
     plt.savefig('posterior.png')
     plt.show()
-    
     pdb.set_trace()
+    
 
 
 
